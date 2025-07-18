@@ -12,7 +12,8 @@ case class DebugModuleParameter(version : Int,
                                 harts : Int,
                                 progBufSize : Int,
                                 datacount : Int,
-                                hartsConfig : Seq[DebugModuleCpuConfig])
+                                hartsConfig : Seq[DebugModuleCpuConfig],
+                                withSysBus: Boolean = false)
 
 
 object DebugDmToHartOp extends SpinalEnum{
@@ -88,13 +89,13 @@ object DebugModule{
   def ebreak() = B(0x00100073, 32 bits)
 }
 
-case class DebugModule(p : DebugModuleParameter, withSysBus: Boolean = false) extends Component{
+case class DebugModule(p : DebugModuleParameter) extends Component{
   import DebugModule._
   val io = new Bundle {
     val ctrl = slave(DebugBus(7))
     val ndmreset = out Bool()
     val harts = Vec.fill(p.harts)(master(DebugHartBus()))
-    val sysBus = withSysBus generate master(DebugSysBus())
+    val sysBus = p.withSysBus generate master(DebugSysBus())
   }
 
   val factory = new DebugBusSlaveFactory(io.ctrl)
@@ -209,30 +210,30 @@ case class DebugModule(p : DebugModuleParameter, withSysBus: Boolean = false) ex
     val sbcs =  new Area{
       val sbversion = factory.read(U(1, 3 bits), 0x38, 29)
 
-      val sbaccess = if (withSysBus) {
+      val sbaccess = if (p.withSysBus) {
         factory.read(U(2, 3 bits), 0x38, 17)
       } else {
-        withSysBus generate factory.createReadAndWrite(UInt(3 bits), 0x38, 17) init(2)
+        p.withSysBus generate factory.createReadAndWrite(UInt(3 bits), 0x38, 17) init(2)
       }
 
-      val sbbusyerror = withSysBus generate factory.createReadAndClearOnSet(Bool(), 0x38, 22) init(False)
-      val sbbusy = withSysBus generate factory.read(Bool(), 0x38, 21)
-      val sbreadonaddr = withSysBus generate factory.createReadAndWrite(Bool(), 0x38, 20) init(False)
-      val sbautoincrement = withSysBus generate factory.createReadAndWrite(Bool(), 0x38, 16) init(False)
-      val sbreadondata = withSysBus generate factory.createReadAndWrite(Bool(), 0x38, 15) init(False)
-      val sberror = withSysBus generate factory.createReadAndClearOnSet(UInt(3 bits), 0x38, 12) init(0)
-      val sbasize = withSysBus generate factory.read(U(32, 7 bits), 0x38, 5)
-      val sbaccess128 = withSysBus generate factory.read(False, 0x38, 4)
-      val sbaccess64 = withSysBus generate factory.read(False, 0x38, 3)
-      val sbaccess32 = withSysBus generate factory.read(True, 0x38, 2)
-      val sbaccess16 = withSysBus generate factory.read(False, 0x38, 1)
-      val sbaccess8 = withSysBus generate factory.read(False, 0x38, 0)
+      val sbbusyerror = p.withSysBus generate factory.createReadAndClearOnSet(Bool(), 0x38, 22) init(False)
+      val sbbusy = p.withSysBus generate factory.read(Bool(), 0x38, 21)
+      val sbreadonaddr = p.withSysBus generate factory.createReadAndWrite(Bool(), 0x38, 20) init(False)
+      val sbautoincrement = p.withSysBus generate factory.createReadAndWrite(Bool(), 0x38, 16) init(False)
+      val sbreadondata = p.withSysBus generate factory.createReadAndWrite(Bool(), 0x38, 15) init(False)
+      val sberror = p.withSysBus generate factory.createReadAndClearOnSet(UInt(3 bits), 0x38, 12) init(0)
+      val sbasize = p.withSysBus generate factory.read(U(32, 7 bits), 0x38, 5)
+      val sbaccess128 = p.withSysBus generate factory.read(False, 0x38, 4)
+      val sbaccess64 = p.withSysBus generate factory.read(False, 0x38, 3)
+      val sbaccess32 = p.withSysBus generate factory.read(True, 0x38, 2)
+      val sbaccess16 = p.withSysBus generate factory.read(False, 0x38, 1)
+      val sbaccess8 = p.withSysBus generate factory.read(False, 0x38, 0)
     }
 
-    val sbaddress0 = withSysBus generate factory.createReadOnly(UInt(32 bits), 0x39) init(0)
-    val sbdata0 = withSysBus generate factory.createReadOnly(Bits(32 bits), 0x3c) init(0)
+    val sbaddress0 = p.withSysBus generate factory.createReadOnly(UInt(32 bits), 0x39) init(0)
+    val sbdata0 = p.withSysBus generate factory.createReadOnly(Bits(32 bits), 0x3c) init(0)
 
-    val sysBusX = withSysBus generate new Area {
+    val sysBusX = p.withSysBus generate new Area {
       val sysBusCmdValid = RegInit(False)
       val sysBusWrite = RegInit(False)
       val sysBusBusy = RegInit(False)
