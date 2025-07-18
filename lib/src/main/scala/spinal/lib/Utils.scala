@@ -903,6 +903,15 @@ object AnalysisUtils{
 //        val clocks = cds.map(_.clock).distinctLinked
 //        println(s"${o.getName()} clocked by ${clocks.map(_.getName()).mkString(",")}")
       }
+      case io if io.isInOut => {
+        val iCds = io.getTags().collect{ case t : ClockDomainReportTag => t.clockDomain}
+        val oCds = mutable.LinkedHashSet[ClockDomain]()
+        seekNonCombDrivers(io){
+          case bt : BaseType if bt.isReg => oCds += bt.clockDomain
+          case _ => println("???")
+        }
+        body(io, iCds.toList ++ oCds.toList)
+      }
     }
   }
 }
