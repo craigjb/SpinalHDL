@@ -223,9 +223,13 @@ case class DebugModule(p : DebugModuleParameter) extends Component{
       val sbreadondata = p.withSysBus generate factory.createReadAndWrite(Bool(), 0x38, 15) init(False)
       val sberror = p.withSysBus generate factory.createReadAndClearOnSet(UInt(3 bits), 0x38, 12) init(0)
       val sbasize = p.withSysBus generate factory.read(U(32, 7 bits), 0x38, 5)
+
+      // 128 and 64 bit not supported yet
       val sbaccess128 = p.withSysBus generate factory.read(False, 0x38, 4)
       val sbaccess64 = p.withSysBus generate factory.read(False, 0x38, 3)
+      // 32 bit access IS supported
       val sbaccess32 = p.withSysBus generate factory.read(True, 0x38, 2)
+      // 16 and 8 bit not supported yet
       val sbaccess16 = p.withSysBus generate factory.read(False, 0x38, 1)
       val sbaccess8 = p.withSysBus generate factory.read(False, 0x38, 0)
     }
@@ -271,6 +275,7 @@ case class DebugModule(p : DebugModuleParameter) extends Component{
           sbaddress0 := io.ctrl.cmd.payload.data.asUInt
           when(sbcs.sbreadonaddr) {
             when(sbcs.sbaccess =/= 2) {
+              // 32 bit accesses only
               sbcs.sberror := 4
             } otherwise {
               sysBusBusy := True
@@ -287,6 +292,7 @@ case class DebugModule(p : DebugModuleParameter) extends Component{
           sbcs.sbbusyerror := True
         } elsewhen(sysBusReady) {
           when(sbcs.sbaccess =/= 2) {
+            // 32 bit accesses only
             sbcs.sberror := 4
           } otherwise {
             sbdata0 := io.ctrl.cmd.payload.data
@@ -301,6 +307,7 @@ case class DebugModule(p : DebugModuleParameter) extends Component{
       factory.onRead(0x3c) {
         when(sysBusReady && sbcs.sbreadondata) {
           when(sbcs.sbaccess =/= 2) {
+            // 32 bit accesses only
             sbcs.sberror := 4
           } otherwise {
             sysBusBusy := True
