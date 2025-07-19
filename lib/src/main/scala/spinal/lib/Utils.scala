@@ -859,7 +859,7 @@ object AnalysisUtils{
 
   def seekNonCombDriversFromSelf(that : Any)(body : Any => Unit): Unit = that match {
     case s : Statement => s match {
-      case s : BaseType if s.isComb => {
+      case s : BaseType if s.isComb || s.isAnalog => {
         if(s.hasTag(classOf[ClockDomainTag])){
           body(s)
         } else {
